@@ -95,10 +95,12 @@ def post_wecom(hit: dict) -> None:
     if not WECOM_WEBHOOK_URL or "http" not in WECOM_WEBHOOK_URL:
         print(f"[wecom] (dry-run) would post: {hit}", file=sys.stderr)
         return
+pn = hit.get("part_number", "料号(示例)")
     content = (
         f"⚠️ 发现目标 iPhone 翻新机！\n"
         f"型号: {hit['variant']}\n"
-        f"价格: ${hit['price']} (预算上限: ${PRICE_CAP})\n"
+        f"价格: ${hit['price']}\n"
+        f"料号: {pn}\n"
         f"链接: {hit['url']}"
     )
     payload_dict = {
