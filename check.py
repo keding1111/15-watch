@@ -14,7 +14,7 @@ from pathlib import Path
 
 PRICE_CAP = int(os.environ.get("PRICE_CAP", "860"))
 STATE_PATH = Path("state.json")
-WECOM_WEBHOOK_URL = os.environ.get("WECOM_WEBHOOK_URL", "").strip()
+WECOM_WEBHOOK_URL = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=8179298e-2dd2-4d1a-96bb-cfb7753fe011"
 MENTION_ALL = os.environ.get("MENTION_ALL", "0") == "0"
 
 UA = (
