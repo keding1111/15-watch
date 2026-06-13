@@ -15,7 +15,7 @@ from pathlib import Path
 PRICE_CAP = int(os.environ.get("PRICE_CAP", "860"))
 STATE_PATH = Path("state.json")
 WECOM_WEBHOOK_URL = os.environ.get("WECOM_WEBHOOK_URL", "").strip()
-MENTION_ALL = os.environ.get("MENTION_ALL", "0") == "0"
+MENTION_ALL = False
 
 UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
