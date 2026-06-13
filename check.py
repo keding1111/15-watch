@@ -14,10 +14,8 @@ from pathlib import Path
 
 PRICE_CAP = int(os.environ.get("PRICE_CAP", "860"))
 STATE_PATH = Path("state.json")
-SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
-# Optional: Slack user ID(s) to @-mention on real hits. Comma-separated for
-# multiple. Leave empty to skip mentions. Test pings never mention anyone.
-SLACK_MENTION_USER_IDS = os.environ.get("SLACK_MENTION_USER_IDS", "").strip()
+WECOM_WEBHOOK_URL = os.environ.get("WECOM_WEBHOOK_URL", "").strip()
+MENTION_ALL = os.environ.get("MENTION_ALL", "0") == "0"
 
 UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -86,24 +84,28 @@ def signature(hit: dict) -> str:
     return f"{hit['retailer']}|{hit['variant']}|{hit['price']}"
 
 
-def post_slack(hit: dict) -> None:
-    if not SLACK_WEBHOOK_URL:
-        print(f"[slack] (dry-run) would post: {hit}", file=sys.stderr)
+def post_wecom(hit: dict) -> None:
+    if not WECOM_WEBHOOK_URL or "http" not in WECOM_WEBHOOK_URL:
+        print(f"[wecom] (dry-run) would post: {hit}", file=sys.stderr)
         return
-    mentions = ""
-    if SLACK_MENTION_USER_IDS:
-        ids = [u.strip() for u in SLACK_MENTION_USER_IDS.split(",") if u.strip()]
-        mentions = " ".join(f"<@{u}>" for u in ids)
-        if mentions:
-            mentions += " "
-    text = (
-        f"{mentions}:rotating_light: iPhone 15 Pro 📱 ${PRICE_CAP} hit — {hit['retailer']}\n"
-        f"{hit['variant']} at ${hit['price']}\n"
-        f"{hit['url']}"
+    content = (
+        f"⚠️ 发现目标 iPhone 翻新机！\n"
+        f"型号: {hit['variant']}\n"
+        f"价格: ${hit['price']} (预算上限: ${PRICE_CAP})\n"
+        f"链接: {hit['url']}"
     )
-    payload = json.dumps({"text": text}).encode("utf-8")
+    payload_dict = {
+        "msgtype": "text",
+        "text": {
+            "content": content
+        }
+    }
+    if MENTION_ALL:
+        payload_dict["text"]["mentioned_list"] = ["@all"]
+
+    payload = json.dumps(payload_dict).encode("utf-8")
     req = urllib.request.Request(
-        SLACK_WEBHOOK_URL,
+        WECOM_WEBHOOK_URL,
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -111,8 +113,9 @@ def post_slack(hit: dict) -> None:
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             resp.read()
+            print("[wecom] alert sent successfully", file=sys.stderr)
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
-        print(f"[slack] post failed: {e}", file=sys.stderr)
+        print(f"[wecom] post failed: {e}", file=sys.stderr)
 
 
 def load_state() -> dict:
@@ -130,13 +133,13 @@ def save_state(state: dict) -> None:
 
 def main() -> int:
     if os.environ.get("TEST_PING") == "1":
-        print("[test] sending Slack test ping")
-        post_slack(
+        print("[test] sending WeCom test ping")
+        post_wecom(
             {
                 "retailer": "TEST",
-                "variant": "end-to-end Slack wiring test",
+                "variant": "企业微信机器人连通性测试 (iPhone 15 Pro)",
                 "price": 0,
-                "url": "https://www.apple.com/shop/refurbished/mac/mac-mini",
+                "url": "https://www.apple.com/shop/refurbished/iphone/iphone-15-pro-iphone-15-pro-max",
             }
         )
         return 0
@@ -157,7 +160,7 @@ def main() -> int:
 
     for key in new_keys:
         print(f"[alert] new hit: {key}")
-        post_slack(current[key])
+        post_wecom(current[key])
 
     save_state(current)
     return 0
