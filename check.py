@@ -61,9 +61,10 @@ def check_apple_refurb() -> list[dict]:
         r"[\s\S]{0,3000}?\$\s*([0-9][0-9,]{2,4})\.\d{2}",
         re.IGNORECASE,
     )
-    
+    part_pattern = re.compile(r'([A-Z0-9]{5,8}/[A-Z])')
     seen = set()
     for m in pattern.finditer(html):
+        full_block = m.group(0)
         title = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.group(1))).strip()
         price = int(m.group(2).replace(",", ""))
         
@@ -75,6 +76,9 @@ def check_apple_refurb() -> list[dict]:
             continue
         seen.add(key)
         
+        part_match = part_pattern.search(full_block)
+        part_number = part_match.group(1) if part_match else "Unknown"
+        
         if price <= PRICE_CAP:
             hits.append(
                 {
@@ -82,6 +86,7 @@ def check_apple_refurb() -> list[dict]:
                     "variant": title[:140],
                     "price": price,
                     "url": url,
+                    "part_number": part_number,
                 }
             )
     return hits
